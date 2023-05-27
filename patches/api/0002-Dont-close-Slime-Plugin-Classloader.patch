@@ -12,7 +12,7 @@ index fe21d31b463317eb90d58cbca5f098958ca93938..8ae0addea5a00938eb04169117ccfb6c
              super.close();
          } finally {
              this.closed = true; // Pufferfish
-+            if (!this.plugin.getName().equals("SlimeWorldManager")) { // ASWM - Don't close
++            if (this.plugin == null || !this.plugin.getName().equals("SlimeWorldManager")) { // ASWM - Don't close
              jar.close();
 +            } // ASWM - Don't close
          }
