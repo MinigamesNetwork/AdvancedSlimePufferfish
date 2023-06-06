@@ -57,7 +57,7 @@ public class ImportWorldCmd implements Subcommand {
                 return true;
             }
 
-            File worldDir = new File(args[0]);
+            File worldDir = new File(Bukkit.getWorldContainer()+File.separator+args[0]);
 
             if (!worldDir.exists() || !worldDir.isDirectory()) {
                 sender.sendMessage(Logging.COMMAND_PREFIX + ChatColor.RED + "Path " + worldDir.getPath() + " does not point out to a valid world directory.");
