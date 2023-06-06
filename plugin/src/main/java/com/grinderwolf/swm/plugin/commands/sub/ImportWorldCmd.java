@@ -129,6 +129,10 @@ public class ImportWorldCmd implements Subcommand {
 
                             Logging.error("Failed to import world " + worldName + ". Stack trace:");
                             ex.printStackTrace();
+                        } catch (Throwable t){
+                            Logging.error("Failed to import world " + worldName + ". Stack trace:");
+                            t.printStackTrace();
+                            sender.sendMessage(Logging.COMMAND_PREFIX + ChatColor.RED + "An error occured while importing the world: " + t.getClass().getSimpleName()+": "+t.getMessage());
                         }
 
                     });
