@@ -27,6 +27,22 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class ImportWorldCmd implements Subcommand {
+    private static final boolean ignore_swm_warning;
+
+    static {
+        boolean ignore_swm_warning1;
+        String property = System.getProperty("ignore-swm-warning");
+        if(property!=null) {
+            try {
+                ignore_swm_warning1 = Boolean.parseBoolean(property);
+            } catch (Exception e){
+                ignore_swm_warning1 = false;
+            }
+        } else {
+            ignore_swm_warning1 = false;
+        }
+        ignore_swm_warning = ignore_swm_warning1;
+    }
 
     @Override
     public String getUsage() {
@@ -67,10 +83,10 @@ public class ImportWorldCmd implements Subcommand {
 
             String[] oldArgs = importCache.getIfPresent(sender.getName());
 
-            if (oldArgs != null) {
+            if (ignore_swm_warning || oldArgs != null) {
                 importCache.invalidate(sender.getName());
 
-                if (Arrays.equals(args, oldArgs)) { // Make sure it's exactly the same command
+                if (ignore_swm_warning || Arrays.equals(args, oldArgs)) { // Make sure it's exactly the same command
                     String worldName = (args.length > 2 ? args[2] : worldDir.getName());
                     sender.sendMessage(Logging.COMMAND_PREFIX + "Importing world " + worldDir.getName() + " into data source " + dataSource + "...");
 
