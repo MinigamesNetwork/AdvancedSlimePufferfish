@@ -1,0 +1,46 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: shoker537 <andreybest2002@ya.ru>
+Date: Tue, 6 Jun 2023 22:03:12 +0300
+Subject: [PATCH] Synchronize in ServerLevel constructor
+
+
+diff --git a/src/main/java/net/minecraft/server/level/ServerLevel.java b/src/main/java/net/minecraft/server/level/ServerLevel.java
+index 4305a51b7001397883ef94764bb9a8771ff66c9e..1c55ecb2284bf1b23a7bdaa278614c237925f382 100644
+--- a/src/main/java/net/minecraft/server/level/ServerLevel.java
++++ b/src/main/java/net/minecraft/server/level/ServerLevel.java
+@@ -550,7 +550,7 @@ public class ServerLevel extends Level implements WorldGenLevel {
+         this.serverLevelData = iworlddataserver;
+         ChunkGenerator chunkgenerator = worlddimension.generator();
+         // CraftBukkit start
+-        this.serverLevelData.setWorld(this);
++        sync(() -> this.serverLevelData.setWorld(this));
+ 
+         if (biomeProvider != null) {
+             BiomeSource worldChunkManager = new CustomWorldChunkManager(getWorld(), biomeProvider, this.server.registryAccess().registryOrThrow(Registries.BIOME));
+@@ -589,7 +589,7 @@ public class ServerLevel extends Level implements WorldGenLevel {
+         this.portalForcer = new PortalForcer(this);
+         this.updateSkyBrightness();
+         this.prepareWeather();
+-        this.getWorldBorder().setAbsoluteMaxSize(minecraftserver.getAbsoluteMaxWorldSize());
++        sync(() -> this.getWorldBorder().setAbsoluteMaxSize(minecraftserver.getAbsoluteMaxWorldSize()));
+         this.raids = (Raids) this.getDataStorage().computeIfAbsent((nbttagcompound) -> {
+             return Raids.load(this, nbttagcompound);
+         }, () -> {
+@@ -611,12 +611,16 @@ public class ServerLevel extends Level implements WorldGenLevel {
+ 
+         this.sleepStatus = new SleepStatus();
+         this.gameEventDispatcher = new GameEventDispatcher(this);
+-        this.getCraftServer().addWorld(this.getWorld()); // CraftBukkit
++        sync(() -> this.getCraftServer().addWorld(this.getWorld())); // CraftBukkit
+ 
+         this.chunkTaskScheduler = new io.papermc.paper.chunk.system.scheduling.ChunkTaskScheduler(this, io.papermc.paper.chunk.system.scheduling.ChunkTaskScheduler.workerThreads); // Paper - rewrite chunk system
+         this.entityLookup = new io.papermc.paper.chunk.system.entity.EntityLookup(this, new EntityCallbacks()); // Paper - rewrite chunk system
+     }
+ 
++    private static void sync(Runnable r){
++        MinecraftServer.getServer().executeBlocking(r);
++    }
++
+     // ASWM START
+     public ChunkGenerator getGenerator(com.infernalsuite.aswm.level.SlimeBootstrap bootstrap) {
+         return null;

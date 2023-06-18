@@ -1,0 +1,43 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: shoker537 <andreybest2002@ya.ru>
+Date: Tue, 6 Jun 2023 15:19:36 +0300
+Subject: [PATCH] Print errors and future timeouts
+
+
+diff --git a/src/main/java/com/infernalsuite/aswm/SlimeNMSBridgeImpl.java b/src/main/java/com/infernalsuite/aswm/SlimeNMSBridgeImpl.java
+index b15bbd6bca5c19c9ec72c87e852025fbb24c09b8..89603e59fc93f5e6fe90fdf24985e143176e36f1 100644
+--- a/src/main/java/com/infernalsuite/aswm/SlimeNMSBridgeImpl.java
++++ b/src/main/java/com/infernalsuite/aswm/SlimeNMSBridgeImpl.java
+@@ -34,6 +34,7 @@ import org.jetbrains.annotations.Nullable;
+ import java.io.IOException;
+ import java.util.Locale;
+ import java.util.concurrent.CompletableFuture;
++import java.util.concurrent.TimeUnit;
+ 
+ public class SlimeNMSBridgeImpl implements SlimeNMSBridge {
+ 
+@@ -140,7 +141,7 @@ public class SlimeNMSBridgeImpl implements SlimeNMSBridge {
+         CompletableFuture<Void> f;
+         f = CompletableFuture.runAsync(() -> registerWorld(level), plugin.getServer().getScheduler().getMainThreadExecutor(plugin));
+         try {
+-            f.get();
++            f.get(30, TimeUnit.SECONDS);
+         } catch (Throwable e) {
+             throw new RuntimeException(e);
+         }
+@@ -199,12 +200,14 @@ public class SlimeNMSBridgeImpl implements SlimeNMSBridge {
+                 try {
+                     return new SlimeLevelInstance(bootstrap, worldDataServer, worldKey, dimension, stem, environment);
+                 } catch (Throwable e) {
++                    e.printStackTrace();
+                     throw new RuntimeException(e);
+                 }
+             }, plugin.getServer().getScheduler().getMainThreadExecutor(plugin));
+             try {
+-                level = f.get();
++                level = f.get(30, TimeUnit.SECONDS);
+             } catch (Throwable e) {
++                e.printStackTrace();
+                 throw new RuntimeException(e);
+             }
+         } else {

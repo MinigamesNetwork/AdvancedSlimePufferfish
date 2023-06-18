@@ -1,0 +1,68 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: shoker537 <andreybest2002@ya.ru>
+Date: Tue, 6 Jun 2023 15:09:41 +0300
+Subject: [PATCH] Return world object creation to main thread
+
+
+diff --git a/src/main/java/com/infernalsuite/aswm/SlimeNMSBridgeImpl.java b/src/main/java/com/infernalsuite/aswm/SlimeNMSBridgeImpl.java
+index bd8134cf9e29934f5c561bd5ba2f353350c56d71..b15bbd6bca5c19c9ec72c87e852025fbb24c09b8 100644
+--- a/src/main/java/com/infernalsuite/aswm/SlimeNMSBridgeImpl.java
++++ b/src/main/java/com/infernalsuite/aswm/SlimeNMSBridgeImpl.java
+@@ -117,7 +117,7 @@ public class SlimeNMSBridgeImpl implements SlimeNMSBridge {
+             throw new IllegalArgumentException("World " + worldName + " already exists! Maybe it's an outdated SlimeWorld object?");
+         }
+ 
+-        SlimeLevelInstance server = createCustomWorld(slimeWorld, dimensionOverride);
++        SlimeLevelInstance server = createCustomWorld(null, slimeWorld, dimensionOverride);
+         registerWorld(server);
+         return server.getSlimeInstance();
+     }
+@@ -129,7 +129,7 @@ public class SlimeNMSBridgeImpl implements SlimeNMSBridge {
+             throw new IllegalArgumentException("World " + worldName + " already exists! Maybe it's an outdated SlimeWorld object?");
+         }
+ 
+-        SlimeLevelInstance server = createCustomWorld(slimeWorld, null);
++        SlimeLevelInstance server = createCustomWorld(plugin, slimeWorld, null);
+ 
+         registerWorldAndWait(plugin, server);
+ 
+@@ -175,7 +175,7 @@ public class SlimeNMSBridgeImpl implements SlimeNMSBridge {
+         mcServer.addLevel(server);
+     }
+ 
+-    private SlimeLevelInstance createCustomWorld(SlimeWorld world, @Nullable ResourceKey<Level> dimensionOverride) {
++    private SlimeLevelInstance createCustomWorld(JavaPlugin plugin, SlimeWorld world, @Nullable ResourceKey<Level> dimensionOverride) {
+         SlimeBootstrap bootstrap = new SlimeBootstrap(world);
+         String worldName = world.getName();
+ 
+@@ -193,10 +193,26 @@ public class SlimeNMSBridgeImpl implements SlimeNMSBridge {
+ 
+         SlimeLevelInstance level;
+ 
+-        try {
+-            level = new SlimeLevelInstance(bootstrap, worldDataServer, worldKey, dimension, stem, environment);
+-        } catch (IOException ex) {
+-            throw new RuntimeException(ex); // TODO do something better with this?
++        if(plugin!=null){
++            CompletableFuture<SlimeLevelInstance> f;
++            f = CompletableFuture.supplyAsync(() -> {
++                try {
++                    return new SlimeLevelInstance(bootstrap, worldDataServer, worldKey, dimension, stem, environment);
++                } catch (Throwable e) {
++                    throw new RuntimeException(e);
++                }
++            }, plugin.getServer().getScheduler().getMainThreadExecutor(plugin));
++            try {
++                level = f.get();
++            } catch (Throwable e) {
++                throw new RuntimeException(e);
++            }
++        } else {
++            try {
++                level = new SlimeLevelInstance(bootstrap, worldDataServer, worldKey, dimension, stem, environment);
++            } catch (IOException ex) {
++                throw new RuntimeException(ex); // TODO do something better with this?
++            }
+         }
+ 
+         // level.setReady(true);
