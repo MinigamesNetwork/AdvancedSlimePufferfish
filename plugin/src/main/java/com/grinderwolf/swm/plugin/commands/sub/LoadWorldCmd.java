@@ -53,15 +53,6 @@ public class LoadWorldCmd implements Subcommand {
                 return true;
             }
 
-            WorldsConfig config = ConfigManager.getWorldConfig();
-            WorldData worldData = config.getWorlds().get(worldName);
-
-            if (worldData == null) {
-                sender.sendMessage(Logging.COMMAND_PREFIX + ChatColor.RED + "Failed to find world " + worldName + " inside the worlds config file.");
-
-                return true;
-            }
-
             if (CommandManager.getInstance().getWorldsInUse().contains(worldName)) {
                 sender.sendMessage(Logging.COMMAND_PREFIX + ChatColor.RED + "World " + worldName + " is already being used on another command! Wait some time and try again.");
 
@@ -73,6 +64,23 @@ public class LoadWorldCmd implements Subcommand {
 
             // It's best to load the world async, and then just go back to the server thread and add it to the world list
             Bukkit.getScheduler().runTaskAsynchronously(SWMPlugin.getInstance(), () -> {
+                WorldsConfig config = ConfigManager.getWorldConfig();
+                WorldData data = config.getWorlds().get(worldName);
+
+                try {
+                    if (data == null && SWMPlugin.getInstance().getLoader("file").worldExists(worldName)) {
+                        sender.sendMessage(Logging.COMMAND_PREFIX + ChatColor.YELLOW + "Failed to find world " + worldName + " inside the worlds config file. Creating a new one.");
+                        data = new WorldData();
+                        data.setAllowAnimals(false);
+                        data.setAllowMonsters(false);
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    sender.sendMessage(Logging.COMMAND_PREFIX + ChatColor.RED + "The world does not exists in config and not found in \"file\" datasource.");
+                    return;
+                }
+
+                WorldData worldData = data;
 
                 try {
                     // ATTEMPT TO LOAD WORLD
