@@ -15,7 +15,7 @@ public class WorldData {
     private String dataSource = "file";
 
     @Setting("spawn")
-    private String spawn = "0.5, 255, 0.5";
+    private String spawn = "0.5, 64, 0.5";
 
     @Setting("difficulty")
     private String difficulty = "peaceful";
@@ -39,7 +39,7 @@ public class WorldData {
     private String defaultBiome = "minecraft:plains";
 
     @Setting("loadOnStartup")
-    private boolean loadOnStartup = true;
+    private boolean loadOnStartup = false;
     @Setting("readOnly")
     private boolean readOnly = false;
 
