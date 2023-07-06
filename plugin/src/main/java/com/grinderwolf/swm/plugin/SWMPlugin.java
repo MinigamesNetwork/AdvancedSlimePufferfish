@@ -13,23 +13,15 @@ import com.grinderwolf.swm.plugin.log.Logging;
 import com.infernalsuite.aswm.api.SlimeNMSBridge;
 import com.infernalsuite.aswm.api.SlimePlugin;
 import com.infernalsuite.aswm.api.events.LoadSlimeWorldEvent;
-import com.infernalsuite.aswm.api.exceptions.CorruptedWorldException;
-import com.infernalsuite.aswm.api.exceptions.InvalidWorldException;
-import com.infernalsuite.aswm.api.exceptions.NewerFormatException;
-import com.infernalsuite.aswm.api.exceptions.UnknownWorldException;
-import com.infernalsuite.aswm.api.exceptions.WorldAlreadyExistsException;
-import com.infernalsuite.aswm.api.exceptions.WorldLoadedException;
-import com.infernalsuite.aswm.api.exceptions.WorldLockedException;
-import com.infernalsuite.aswm.api.exceptions.WorldTooBigException;
+import com.infernalsuite.aswm.api.exceptions.*;
 import com.infernalsuite.aswm.api.loaders.SlimeLoader;
+import com.infernalsuite.aswm.api.world.SlimeWorld;
+import com.infernalsuite.aswm.api.world.SlimeWorldInstance;
+import com.infernalsuite.aswm.api.world.properties.SlimePropertyMap;
 import com.infernalsuite.aswm.serialization.anvil.AnvilWorldReader;
 import com.infernalsuite.aswm.serialization.slime.SlimeSerializer;
 import com.infernalsuite.aswm.serialization.slime.reader.SlimeWorldReaderRegistry;
 import com.infernalsuite.aswm.skeleton.SkeletonSlimeWorld;
-import com.infernalsuite.aswm.api.world.SlimeWorld;
-import com.infernalsuite.aswm.api.world.SlimeWorldInstance;
-import com.infernalsuite.aswm.api.world.properties.SlimePropertyMap;
-import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
 import org.bukkit.command.PluginCommand;
@@ -41,12 +33,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Properties;
-import java.util.concurrent.CompletableFuture;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class SWMPlugin extends JavaPlugin implements SlimePlugin, Listener {
@@ -120,8 +107,7 @@ public class SWMPlugin extends JavaPlugin implements SlimePlugin, Listener {
             return;
         }
 
-        Metrics metrics = new Metrics(this, BSTATS_ID);
-
+//        Metrics metrics = new Metrics(this, BSTATS_ID);
         final CommandManager commandManager = new CommandManager();
         final PluginCommand swmCommand = getCommand("swm");
         swmCommand.setExecutor(commandManager);
@@ -305,7 +291,6 @@ public class SWMPlugin extends JavaPlugin implements SlimePlugin, Listener {
         loadedWorlds.remove(worldUnloadEvent.getWorld().getName());
     }
 
-    @Override
     public SlimeWorld loadWorld(SlimeWorld slimeWorld) {
         Objects.requireNonNull(slimeWorld, "SlimeWorld cannot be null");
 
@@ -318,13 +303,20 @@ public class SWMPlugin extends JavaPlugin implements SlimePlugin, Listener {
 
         SlimeWorld mirror = instance.getSlimeWorldMirror();
 
-        CompletableFuture<Void> f;
-        f = CompletableFuture.runAsync(() -> Bukkit.getPluginManager().callEvent(new LoadSlimeWorldEvent(mirror)), getServer().getScheduler().getMainThreadExecutor(this));
-        try {
-            f.get();
-        } catch (Throwable e) {
-            throw new RuntimeException(e);
-        }
+        getServer().getScheduler().runTask(this, () -> Bukkit.getPluginManager().callEvent(new LoadSlimeWorldEvent(mirror)));
+
+//        CompletableFuture<Void> f;
+//        f = CompletableFuture.runAsync(() -> {
+//            try {
+//            } catch (Throwable t){
+//                t.printStackTrace();
+//            }
+//        }, getServer().getScheduler().getMainThreadExecutor(this));
+//        try {
+//            f.get(10, TimeUnit.SECONDS);
+//        } catch (Throwable e) {
+//            throw new RuntimeException(e);
+//        }
         registerWorld(mirror);
 
         if (!slimeWorld.isReadOnly() && slimeWorld.getLoader() != null) {
