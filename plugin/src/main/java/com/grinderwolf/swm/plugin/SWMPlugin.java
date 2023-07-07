@@ -49,6 +49,7 @@ import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class SWMPlugin extends JavaPlugin implements SlimePlugin, Listener {
+    private long mainThreadId;
 
     private static final SlimeNMSBridge BRIDGE_INSTANCE = SlimeNMSBridge.instance();
 
@@ -68,6 +69,7 @@ public class SWMPlugin extends JavaPlugin implements SlimePlugin, Listener {
 
     @Override
     public void onLoad() {
+        mainThreadId = Thread.currentThread().getId();
         isPaperMC = checkIsPaper();
 
         try {
@@ -306,11 +308,15 @@ public class SWMPlugin extends JavaPlugin implements SlimePlugin, Listener {
     @Override
     public SlimeWorld loadWorld(SlimeWorld slimeWorld) {
         Objects.requireNonNull(slimeWorld, "SlimeWorld cannot be null");
-
-        SlimeWorldInstance instance = BRIDGE_INSTANCE.loadInstance(slimeWorld);
+        SlimeWorldInstance instance;
+        if(Thread.currentThread().getId()!=mainThreadId){
+            instance = BRIDGE_INSTANCE.loadInstanceAsync(this, slimeWorld);
+        } else {
+            instance = BRIDGE_INSTANCE.loadInstance(slimeWorld);
+        }
 
         SlimeWorld mirror = instance.getSlimeWorldMirror();
-        Bukkit.getPluginManager().callEvent(new LoadSlimeWorldEvent(mirror));
+        getServer().getScheduler().runTask(this, () -> Bukkit.getPluginManager().callEvent(new LoadSlimeWorldEvent(mirror)));
         registerWorld(mirror);
 
         if (!slimeWorld.isReadOnly() && slimeWorld.getLoader() != null) {
