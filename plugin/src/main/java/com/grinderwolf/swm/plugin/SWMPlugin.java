@@ -314,14 +314,18 @@ public class SWMPlugin extends JavaPlugin implements SlimePlugin, Listener {
     @Override
     public SlimeWorld loadWorld(SlimeWorld slimeWorld, boolean callWorldLoadEvent) throws WorldLockedException, UnknownWorldException, IOException {
         Objects.requireNonNull(slimeWorld, "SlimeWorld cannot be null");
-
-        SlimeWorldInstance instance = BRIDGE_INSTANCE.loadInstance(slimeWorld);
-        SlimeWorld mirror = instance.getSlimeWorldMirror();
-
-        Bukkit.getPluginManager().callEvent(new LoadSlimeWorldEvent(mirror));
-        if (callWorldLoadEvent) {
-            Bukkit.getPluginManager().callEvent(new WorldLoadEvent(instance.getBukkitWorld()));
+        SlimeWorldInstance instance;
+        if(Bukkit.isPrimaryThread()){
+            instance = BRIDGE_INSTANCE.loadInstanceAsync(this, slimeWorld);
+        } else {
+            instance = BRIDGE_INSTANCE.loadInstance(slimeWorld);
         }
+
+        SlimeWorld mirror = instance.getSlimeWorldMirror();
+        getServer().getScheduler().runTask(this, () -> {
+            Bukkit.getPluginManager().callEvent(new LoadSlimeWorldEvent(mirror));
+            if (callWorldLoadEvent) Bukkit.getPluginManager().callEvent(new WorldLoadEvent(mirror.getBukkitWorld()));
+        });
 
         registerWorld(mirror);
         return mirror;
@@ -399,5 +403,9 @@ public class SWMPlugin extends JavaPlugin implements SlimePlugin, Listener {
 
     public static SWMPlugin getInstance() {
         return SWMPlugin.getPlugin(SWMPlugin.class);
+    }
+
+    private void runAsync(Runnable runnable) {
+        getServer().getScheduler().runTaskAsynchronously(this, runnable);
     }
 }
