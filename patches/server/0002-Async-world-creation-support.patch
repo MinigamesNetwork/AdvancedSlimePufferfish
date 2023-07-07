@@ -1,0 +1,147 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: shoker537 <andreybest2002@ya.ru>
+Date: Fri, 7 Jul 2023 09:34:28 +0300
+Subject: [PATCH] Async world creation support
+
+
+diff --git a/src/main/java/com/infernalsuite/aswm/SlimeNMSBridgeImpl.java b/src/main/java/com/infernalsuite/aswm/SlimeNMSBridgeImpl.java
+index 20f16757ba8b8da525ff17d51d4f7eb660c4d22b..beab6cdbc4f15875eb6f4f189de5981d6d08548d 100644
+--- a/src/main/java/com/infernalsuite/aswm/SlimeNMSBridgeImpl.java
++++ b/src/main/java/com/infernalsuite/aswm/SlimeNMSBridgeImpl.java
+@@ -8,7 +8,6 @@ import com.infernalsuite.aswm.level.SlimeBootstrap;
+ import com.infernalsuite.aswm.level.SlimeInMemoryWorld;
+ import com.infernalsuite.aswm.level.SlimeLevelInstance;
+ import com.mojang.serialization.Lifecycle;
+-import net.kyori.adventure.util.Services;
+ import net.minecraft.SharedConstants;
+ import net.minecraft.core.registries.Registries;
+ import net.minecraft.resources.ResourceKey;
+@@ -29,10 +28,15 @@ import org.apache.logging.log4j.Logger;
+ import org.bukkit.Bukkit;
+ import org.bukkit.World;
+ import org.bukkit.craftbukkit.CraftWorld;
++import org.bukkit.plugin.java.JavaPlugin;
+ import org.jetbrains.annotations.Nullable;
+ 
+ import java.io.IOException;
+ import java.util.Locale;
++import java.util.concurrent.CompletableFuture;
++import java.util.concurrent.ExecutionException;
++import java.util.concurrent.TimeUnit;
++import java.util.concurrent.TimeoutException;
+ 
+ public class SlimeNMSBridgeImpl implements SlimeNMSBridge {
+ 
+@@ -117,11 +121,33 @@ public class SlimeNMSBridgeImpl implements SlimeNMSBridge {
+             throw new IllegalArgumentException("World " + worldName + " already exists! Maybe it's an outdated SlimeWorld object?");
+         }
+ 
+-        SlimeLevelInstance server = createCustomWorld(slimeWorld, dimensionOverride);
++        SlimeLevelInstance server = createCustomWorld(null, slimeWorld, dimensionOverride);
+         registerWorld(server);
+         return server.getSlimeInstance();
+     }
+ 
++    @Override
++    public SlimeWorldInstance loadInstanceAsync(JavaPlugin plugin, SlimeWorld slimeWorld) {
++        String worldName = slimeWorld.getName();
++
++        if (Bukkit.getWorld(worldName) != null) {
++            throw new IllegalArgumentException("World " + worldName + " already exists! Maybe it's an outdated SlimeWorld object?");
++        }
++
++        SlimeLevelInstance server = createCustomWorld(plugin, slimeWorld, null);
++        registerWorldAndWait(plugin, server);
++        return server.getSlimeInstance();
++    }
++
++    private synchronized void registerWorldAndWait(JavaPlugin plugin, SlimeLevelInstance level){
++        CompletableFuture<Void> f = CompletableFuture.runAsync(() -> registerWorld(level), plugin.getServer().getScheduler().getMainThreadExecutor(plugin));
++        try {
++            f.get(30, TimeUnit.SECONDS);
++        } catch (Throwable t){
++            throw new RuntimeException(t);
++        }
++    }
++
+     @Override
+     public SlimeWorldInstance getInstance(World world) {
+         CraftWorld craftWorld = (CraftWorld) world;
+@@ -151,7 +177,7 @@ public class SlimeNMSBridgeImpl implements SlimeNMSBridge {
+         mcServer.addLevel(server);
+     }
+ 
+-    private SlimeLevelInstance createCustomWorld(SlimeWorld world, @Nullable ResourceKey<Level> dimensionOverride) {
++    private SlimeLevelInstance createCustomWorld(JavaPlugin plugin, SlimeWorld world, @Nullable ResourceKey<Level> dimensionOverride) {
+         SlimeBootstrap bootstrap = new SlimeBootstrap(world);
+         String worldName = world.getName();
+ 
+@@ -169,10 +195,25 @@ public class SlimeNMSBridgeImpl implements SlimeNMSBridge {
+ 
+         SlimeLevelInstance level;
+ 
+-        try {
+-            level = new SlimeLevelInstance(bootstrap, worldDataServer, worldKey, dimension, stem, environment);
+-        } catch (IOException ex) {
+-            throw new RuntimeException(ex); // TODO do something better with this?
++        if(plugin==null) {
++            try {
++                level = new SlimeLevelInstance(bootstrap, worldDataServer, worldKey, dimension, stem, environment);
++            } catch (IOException ex) {
++                throw new RuntimeException(ex); // TODO do something better with this?
++            }
++        } else {
++            CompletableFuture<SlimeLevelInstance> f = CompletableFuture.supplyAsync(() -> {
++                try {
++                    return new SlimeLevelInstance(bootstrap, worldDataServer, worldKey, dimension, stem, environment);
++                } catch (IOException ex) {
++                    throw new RuntimeException(ex); // TODO do something better with this?
++                }
++            }, plugin.getServer().getScheduler().getMainThreadExecutor(plugin));
++            try {
++                level = f.get(30, TimeUnit.SECONDS);
++            } catch (InterruptedException | ExecutionException | TimeoutException e) {
++                throw new RuntimeException(e);
++            }
+         }
+ 
+         // level.setReady(true);
+diff --git a/src/main/java/net/minecraft/server/level/ServerLevel.java b/src/main/java/net/minecraft/server/level/ServerLevel.java
+index 560350cd7b09516b7a10dbcca0d2a7af15f57871..3a7ab91aa4d63a49eabdb5440e2b0829325c34f6 100644
+--- a/src/main/java/net/minecraft/server/level/ServerLevel.java
++++ b/src/main/java/net/minecraft/server/level/ServerLevel.java
+@@ -674,7 +674,7 @@ public class ServerLevel extends Level implements WorldGenLevel {
+         this.serverLevelData = iworlddataserver;
+         ChunkGenerator chunkgenerator = worlddimension.generator();
+         // CraftBukkit start
+-        this.serverLevelData.setWorld(this);
++        sync(() -> this.serverLevelData.setWorld(this));
+ 
+         if (biomeProvider != null) {
+             BiomeSource worldChunkManager = new CustomWorldChunkManager(getWorld(), biomeProvider, this.server.registryAccess().registryOrThrow(Registries.BIOME));
+@@ -713,7 +713,7 @@ public class ServerLevel extends Level implements WorldGenLevel {
+         this.portalForcer = new PortalForcer(this);
+         this.updateSkyBrightness();
+         this.prepareWeather();
+-        this.getWorldBorder().setAbsoluteMaxSize(minecraftserver.getAbsoluteMaxWorldSize());
++        sync(() -> this.getWorldBorder().setAbsoluteMaxSize(minecraftserver.getAbsoluteMaxWorldSize()));
+         this.raids = (Raids) this.getDataStorage().computeIfAbsent((nbttagcompound) -> {
+             return Raids.load(this, nbttagcompound);
+         }, () -> {
+@@ -742,12 +742,15 @@ public class ServerLevel extends Level implements WorldGenLevel {
+                 return new RandomSequences(l);
+             }, "random_sequences");
+         });
+-        this.getCraftServer().addWorld(this.getWorld()); // CraftBukkit
++        sync(() -> this.getCraftServer().addWorld(this.getWorld()));
+ 
+         this.chunkTaskScheduler = new io.papermc.paper.chunk.system.scheduling.ChunkTaskScheduler(this, io.papermc.paper.chunk.system.scheduling.ChunkTaskScheduler.workerThreads); // Paper - rewrite chunk system
+         this.entityLookup = new io.papermc.paper.chunk.system.entity.EntityLookup(this, new EntityCallbacks()); // Paper - rewrite chunk system
+     }
+ 
++    private static void sync(Runnable r){
++        MinecraftServer.getServer().executeBlocking(r);
++    }
+     // Paper start
+     @Override
+     public boolean hasChunk(int chunkX, int chunkZ) {
