@@ -29,6 +29,22 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class ImportWorldCmd implements Subcommand {
+    private static final boolean ignore_swm_warning;
+
+    static {
+        boolean ignore_swm_warning1;
+        String property = System.getProperty("ignore-swm-warning");
+        if(property!=null) {
+            try {
+                ignore_swm_warning1 = Boolean.parseBoolean(property);
+            } catch (Exception e){
+                ignore_swm_warning1 = false;
+            }
+        } else {
+            ignore_swm_warning1 = false;
+        }
+        ignore_swm_warning = ignore_swm_warning1;
+    }
 
     @Override
     public String getUsage() {
@@ -59,7 +75,7 @@ public class ImportWorldCmd implements Subcommand {
                 return true;
             }
 
-            File worldDir = new File(args[0]);
+            File worldDir = new File(Bukkit.getWorldContainer()+File.separator+args[0]);
 
             if (!worldDir.exists() || !worldDir.isDirectory()) {
                 sender.sendMessage(Logging.COMMAND_PREFIX + ChatColor.RED + "Path " + worldDir.getPath() + " does not point out to a valid world directory.");
@@ -69,10 +85,10 @@ public class ImportWorldCmd implements Subcommand {
 
             String[] oldArgs = importCache.getIfPresent(sender.getName());
 
-            if (oldArgs != null) {
+            if (ignore_swm_warning || oldArgs != null) {
                 importCache.invalidate(sender.getName());
 
-                if (Arrays.equals(args, oldArgs)) { // Make sure it's exactly the same command
+                if (ignore_swm_warning || Arrays.equals(args, oldArgs)) { // Make sure it's exactly the same command
                     String worldName = (args.length > 2 ? args[2] : worldDir.getName());
                     sender.sendMessage(Logging.COMMAND_PREFIX + "Importing world " + worldDir.getName() + " into data source " + dataSource + "...");
 
@@ -111,7 +127,6 @@ public class ImportWorldCmd implements Subcommand {
                             }
 
                             worldData.setDataSource(dataSource);
-                            worldData.setSpawn(spawn.toString().isEmpty() ? "0.5, 255, 0.5" : spawn.toString());
                             config.getWorlds().put(worldName, worldData);
                             config.save();
 
@@ -132,6 +147,10 @@ public class ImportWorldCmd implements Subcommand {
 
                             Logging.error("Failed to import world " + worldName + ". Stack trace:");
                             ex.printStackTrace();
+                        } catch (Throwable t){
+                            Logging.error("Failed to import world " + worldName + ". Stack trace:");
+                            t.printStackTrace();
+                            sender.sendMessage(Logging.COMMAND_PREFIX + ChatColor.RED + "An error occured while importing the world: " + t.getClass().getSimpleName()+": "+t.getMessage());
                         }
 
                     });
