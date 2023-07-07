@@ -53,15 +53,6 @@ public class LoadWorldCmd implements Subcommand {
                 return true;
             }
 
-            WorldsConfig config = ConfigManager.getWorldConfig();
-            WorldData worldData = config.getWorlds().get(worldName);
-
-            if (worldData == null) {
-                sender.sendMessage(Logging.COMMAND_PREFIX + ChatColor.RED + "Failed to find world " + worldName + " inside the worlds config file.");
-
-                return true;
-            }
-
             if (CommandManager.getInstance().getWorldsInUse().contains(worldName)) {
                 sender.sendMessage(Logging.COMMAND_PREFIX + ChatColor.RED + "World " + worldName + " is already being used on another command! Wait some time and try again.");
 
@@ -70,6 +61,29 @@ public class LoadWorldCmd implements Subcommand {
 
             CommandManager.getInstance().getWorldsInUse().add(worldName);
             sender.sendMessage(Logging.COMMAND_PREFIX + ChatColor.GRAY + "Loading world " + ChatColor.YELLOW + worldName + ChatColor.GRAY + "...");
+            WorldsConfig config = ConfigManager.getWorldConfig();
+            WorldData data = config.getWorlds().get(worldName);
+
+            try {
+                if (data == null) {
+                    if(!SWMPlugin.getInstance().getLoader("file").worldExists(worldName)){
+                        sender.sendMessage(Logging.COMMAND_PREFIX + ChatColor.RED + "The world does not exists in config and not found in \"file\" datasource.");
+                        return false;
+                    }
+                    sender.sendMessage(Logging.COMMAND_PREFIX + ChatColor.YELLOW + "Failed to find world " + worldName + " inside the worlds config file. Using default properties.");
+                    data = new WorldData();
+                    data.setAllowAnimals(false);
+                    data.setAllowMonsters(false);
+                    data.setDataSource("file");
+                    config.getWorlds().put(worldName, data);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                sender.sendMessage(Logging.COMMAND_PREFIX + ChatColor.RED + "Error reading world file: "+e.getMessage());
+                return false;
+            }
+
+            WorldData worldData = data;
 
             // It's best to load the world async, and then just go back to the server thread and add it to the world list
             Bukkit.getScheduler().runTaskAsynchronously(SWMPlugin.getInstance(), () -> {
@@ -84,22 +98,15 @@ public class LoadWorldCmd implements Subcommand {
                     }
 
                     SlimeWorld slimeWorld = SWMPlugin.getInstance().loadWorld(loader, worldName, worldData.isReadOnly(), worldData.toPropertyMap());
-                    Bukkit.getScheduler().runTask(SWMPlugin.getInstance(), () -> {
-                        try {
-                            SWMPlugin.getInstance().loadWorld(slimeWorld, true);
-                        } catch (IllegalArgumentException ex) {
-                            sender.sendMessage(Logging.COMMAND_PREFIX + ChatColor.RED + "Failed to generate world " + worldName + ": " + ex.getMessage() + ".");
-
-                            return;
-                        } catch(WorldLockedException | UnknownWorldException | IOException exception) {
-                            SWMPlugin.getInstance().getLogger().info("Failed to load world " + worldName + ": " + exception.getMessage());
-                            sender.sendMessage(Logging.COMMAND_PREFIX + ChatColor.RED + "Failed to load world " + worldName + ": " + exception.getMessage() + ".");
-                            return;
-                        }
-
-                        sender.sendMessage(Logging.COMMAND_PREFIX + ChatColor.GREEN + "World " + ChatColor.YELLOW + worldName
-                                + ChatColor.GREEN + " loaded and generated in " + (System.currentTimeMillis() - start) + "ms!");
-                    });
+                    // No need to load the world sync anymore
+                    try {
+                        SWMPlugin.getInstance().loadWorld(slimeWorld);
+                    } catch (Throwable ex) {
+                        sender.sendMessage(Logging.COMMAND_PREFIX + ChatColor.RED + "Failed to generate world " + worldName + ": " + ex.getMessage() + ".");
+                        return;
+                    }
+                    sender.sendMessage(Logging.COMMAND_PREFIX + ChatColor.GREEN + "World " + ChatColor.YELLOW + worldName
+                            + ChatColor.GREEN + " loaded and generated in " + (System.currentTimeMillis() - start) + "ms!");
                 } catch (CorruptedWorldException ex) {
                     if (!(sender instanceof ConsoleCommandSender)) {
                         sender.sendMessage(Logging.COMMAND_PREFIX + ChatColor.RED + "Failed to load world " + worldName +
