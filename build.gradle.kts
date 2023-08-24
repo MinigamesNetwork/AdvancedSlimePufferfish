@@ -1,9 +1,9 @@
 plugins {
     java
     `maven-publish`
-    id("com.github.johnrengelman.shadow") version "8.1.0" apply false
-    id("io.papermc.paperweight.patcher") version "1.5.3"
-    id("org.kordamp.gradle.profiles") version "0.47.0"
+    id("com.github.johnrengelman.shadow") version "8.1.1" apply false
+    id("io.papermc.paperweight.patcher") version "1.5.5"
+    id("org.kordamp.gradle.profiles") version "0.51.0"
 }
 
 val paperMavenPublicUrl = "https://repo.papermc.io/repository/maven-public/"
@@ -21,7 +21,7 @@ allprojects {
 
     java {
         toolchain {
-            languageVersion.set(JavaLanguageVersion.of(17))
+            languageVersion.set(JavaLanguageVersion.of(20))
         }
     }
 
@@ -37,21 +37,22 @@ allprojects {
     }
 
     tasks.javadoc {
-        (options as StandardJavadocDocletOptions).addStringOption("-add-modules", "jdk.incubator.vector")
-        (options as StandardJavadocDocletOptions).addStringOption("Xdoclint:none", "-quiet")
+        val options = options as StandardJavadocDocletOptions
+        options.addStringOption("-add-modules", "jdk.incubator.vector")
+        options.addStringOption("Xdoclint:none", "-quiet")
     }
 }
 
 dependencies {
-    remapper("net.fabricmc:tiny-remapper:0.8.6:fat")
-    decompiler("net.minecraftforge:forgeflower:2.0.627.2")
+    remapper("net.fabricmc:tiny-remapper:0.8.9:fat")
+    decompiler("net.minecraftforge:forgeflower:2.0.629.0")
     paperclip("io.papermc:paperclip:3.0.2")
 }
 
 subprojects {
     tasks.withType<JavaCompile> {
         options.encoding = Charsets.UTF_8.name()
-        options.release.set(17)
+        options.release.set(20)
     }
     tasks.withType<Javadoc> {
         options.encoding = Charsets.UTF_8.name()
