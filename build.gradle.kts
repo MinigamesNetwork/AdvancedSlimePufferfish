@@ -21,7 +21,7 @@ allprojects {
 
     java {
         toolchain {
-            languageVersion.set(JavaLanguageVersion.of(20))
+            languageVersion.set(JavaLanguageVersion.of(19))
         }
     }
 
@@ -52,7 +52,7 @@ dependencies {
 subprojects {
     tasks.withType<JavaCompile> {
         options.encoding = Charsets.UTF_8.name()
-        options.release.set(20)
+        options.release.set(19)
     }
     tasks.withType<Javadoc> {
         options.encoding = Charsets.UTF_8.name()
