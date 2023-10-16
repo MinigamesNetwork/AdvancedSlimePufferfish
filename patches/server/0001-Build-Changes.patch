@@ -5,11 +5,11 @@ Subject: [PATCH] Build Changes
 
 
 diff --git a/build.gradle.kts b/build.gradle.kts
-index a9a47edb8cb725177b1806ba02fe0bb112038b96..e7101d5675fd50a85b694cee54a63eae3d24470e 100644
+index 1c1dd088187f5700e3e4b7ec3b4b6c0acd5c119a..04d62fb3efa1421bff40983fa8b22c5cc2cdd652 100644
 --- a/build.gradle.kts
 +++ b/build.gradle.kts
-@@ -7,12 +7,15 @@ plugins {
- }
+@@ -13,12 +13,15 @@ configurations.named(log4jPlugins.compileClasspathConfigurationName) {
+ val alsoShade: Configuration by configurations.creating
  
  dependencies {
 -    implementation(project(":pufferfish-api")) // Pufferfish // Paper
@@ -25,7 +25,7 @@ index a9a47edb8cb725177b1806ba02fe0bb112038b96..e7101d5675fd50a85b694cee54a63eae
      // Paper start
      implementation("org.jline:jline-terminal-jansi:3.21.0")
      implementation("net.minecrell:terminalconsoleappender:1.3.0")
-@@ -84,7 +87,7 @@ tasks.jar {
+@@ -92,7 +95,7 @@ tasks.jar {
          attributes(
              "Main-Class" to "org.bukkit.craftbukkit.Main",
              "Implementation-Title" to "CraftBukkit",
@@ -34,7 +34,7 @@ index a9a47edb8cb725177b1806ba02fe0bb112038b96..e7101d5675fd50a85b694cee54a63eae
              "Implementation-Vendor" to date, // Paper
              "Specification-Title" to "Bukkit",
              "Specification-Version" to project.version,
-@@ -156,7 +159,7 @@ fun TaskContainer.registerRunTask(
+@@ -169,7 +172,7 @@ fun TaskContainer.registerRunTask(
      name: String,
      block: JavaExec.() -> Unit
  ): TaskProvider<JavaExec> = register<JavaExec>(name) {
@@ -1972,7 +1972,7 @@ index 51304c5cf4b0ac7646693ef97ef4a3847d3342b5..376a64344720a31f89c863bcdcdc3666
  
                  this.world.getEntityLookup().addEntityChunkEntities(entities);
 diff --git a/src/main/java/io/papermc/paper/world/ChunkEntitySlices.java b/src/main/java/io/papermc/paper/world/ChunkEntitySlices.java
-index ce449b7b6f615f2c8240e4207f06d4e54ae0083e..a94e41a2315c17fb7c387efd9ee5db7f8313d42c 100644
+index 7e8dc9e8f381abfdcce2746edc93122d623622d1..12aadf4c981cdb1a6405de99016f4b40e83a04b8 100644
 --- a/src/main/java/io/papermc/paper/world/ChunkEntitySlices.java
 +++ b/src/main/java/io/papermc/paper/world/ChunkEntitySlices.java
 @@ -36,7 +36,7 @@ public final class ChunkEntitySlices {
@@ -1985,7 +1985,7 @@ index ce449b7b6f615f2c8240e4207f06d4e54ae0083e..a94e41a2315c17fb7c387efd9ee5db7f
      public FullChunkStatus status;
  
 diff --git a/src/main/java/net/minecraft/server/MinecraftServer.java b/src/main/java/net/minecraft/server/MinecraftServer.java
-index 7ca6c81afc99d42d2f39b4b6d7f5e8a18b58fba3..1e976253823e85cb6611113847649859f6de3612 100644
+index 67cba5cf510e4a602121e10c015a491650127752..013c778d4fc0489527d934098771c09a3cd6d45a 100644
 --- a/src/main/java/net/minecraft/server/MinecraftServer.java
 +++ b/src/main/java/net/minecraft/server/MinecraftServer.java
 @@ -272,7 +272,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
@@ -1997,7 +1997,7 @@ index 7ca6c81afc99d42d2f39b4b6d7f5e8a18b58fba3..1e976253823e85cb6611113847649859
      private final CustomBossEvents customBossEvents;
      private final ServerFunctionManager functionManager;
      private final FrameTimer frameTimer;
-@@ -455,60 +455,75 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+@@ -454,60 +454,75 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
          LevelStorageSource.LevelStorageAccess worldSession = this.storageSource;
  
          Registry<LevelStem> dimensions = this.registries.compositeAccess().registryOrThrow(Registries.LEVEL_STEM);
@@ -2089,7 +2089,7 @@ index 7ca6c81afc99d42d2f39b4b6d7f5e8a18b58fba3..1e976253823e85cb6611113847649859
                          MinecraftServer.LOGGER.warn("Could not create path for " + newWorld + "!");
                          MinecraftServer.LOGGER.info("---- Migration of old " + worldType + " folder failed ----");
                      }
-@@ -516,7 +531,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+@@ -515,7 +530,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
  
                  try {
                      worldSession = LevelStorageSource.createDefault(this.server.getWorldContainer().toPath()).validateAndCreateAccess(name, dimensionKey);
@@ -2098,7 +2098,7 @@ index 7ca6c81afc99d42d2f39b4b6d7f5e8a18b58fba3..1e976253823e85cb6611113847649859
                      throw new RuntimeException(ex);
                  }
              }
-@@ -530,18 +545,18 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+@@ -529,18 +544,18 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
              DynamicOps<Tag> dynamicops = RegistryOps.create(NbtOps.INSTANCE, (HolderLookup.Provider) worldloader_a.datapackWorldgen());
              Pair<WorldData, WorldDimensions.Complete> pair = worldSession.getDataTag(dynamicops, worldloader_a.dataConfiguration(), iregistry, worldloader_a.datapackWorldgen().allRegistriesLifecycle());
  
@@ -2121,7 +2121,7 @@ index 7ca6c81afc99d42d2f39b4b6d7f5e8a18b58fba3..1e976253823e85cb6611113847649859
                      DedicatedServerProperties dedicatedserverproperties = ((DedicatedServer) this).getProperties();
  
                      worldsettings = new LevelSettings(dedicatedserverproperties.levelName, dedicatedserverproperties.gamemode, dedicatedserverproperties.hardcore, dedicatedserverproperties.difficulty, false, new GameRules(), worldloader_a.dataConfiguration());
-@@ -566,20 +581,20 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+@@ -565,20 +580,20 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
              LevelStem worlddimension = (LevelStem) dimensions.get(dimensionKey);
  
              org.bukkit.generator.WorldInfo worldInfo = new org.bukkit.craftbukkit.generator.CraftWorldInfo(iworlddataserver, worldSession, org.bukkit.World.Environment.getEnvironment(dimension), worlddimension.type().value(), worlddimension.generator(), this.registryAccess()); // Paper
@@ -2146,7 +2146,7 @@ index 7ca6c81afc99d42d2f39b4b6d7f5e8a18b58fba3..1e976253823e85cb6611113847649859
                  this.worldData = worlddata;
                  this.worldData.setGameType(((DedicatedServer) this).getProperties().gamemode); // From DedicatedServer.init
  
-@@ -590,13 +605,13 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+@@ -589,13 +604,13 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
                  this.readScoreboard(worldpersistentdata);
                  this.server.scoreboardManager = new org.bukkit.craftbukkit.scoreboard.CraftScoreboardManager(this, world.getScoreboard());
                  this.commandStorage = new CommandStorage(worldpersistentdata);
@@ -2163,7 +2163,7 @@ index 7ca6c81afc99d42d2f39b4b6d7f5e8a18b58fba3..1e976253823e85cb6611113847649859
                      spawners = Collections.emptyList();
                  }
                  world = new ServerLevel(this, this.executor, worldSession, iworlddataserver, worldKey, worlddimension, worldloadlistener, flag, j, spawners, true, this.overworld().getRandomSequences(), org.bukkit.World.Environment.getEnvironment(dimension), gen, biomeProvider);
-@@ -610,12 +625,12 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+@@ -609,12 +624,12 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
              // Paper - move up
              this.getPlayerList().addWorldborderListener(world);
  
@@ -2178,7 +2178,7 @@ index 7ca6c81afc99d42d2f39b4b6d7f5e8a18b58fba3..1e976253823e85cb6611113847649859
              this.prepareLevels(worldserver.getChunkSource().chunkMap.progressListener, worldserver);
              //worldserver.entityManager.tick(); // SPIGOT-6526: Load pending entities so they are available to the API // Paper - rewrite chunk system, not required to "tick" anything
              this.server.getPluginManager().callEvent(new org.bukkit.event.world.WorldLoadEvent(worldserver.getWorld()));
-@@ -624,11 +639,11 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+@@ -623,11 +638,11 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
          // Paper start - Handle collideRule team for player collision toggle
          final ServerScoreboard scoreboard = this.getScoreboard();
          final java.util.Collection<String> toRemove = scoreboard.getPlayerTeams().stream().filter(team -> team.getName().startsWith("collideRule_")).map(net.minecraft.world.scores.PlayerTeam::getName).collect(java.util.stream.Collectors.toList());
@@ -2192,7 +2192,7 @@ index 7ca6c81afc99d42d2f39b4b6d7f5e8a18b58fba3..1e976253823e85cb6611113847649859
              this.getPlayerList().collideRuleTeamName = org.apache.commons.lang3.StringUtils.left("collideRule_" + java.util.concurrent.ThreadLocalRandom.current().nextInt(), 16);
              net.minecraft.world.scores.PlayerTeam collideTeam = scoreboard.addPlayerTeam(this.getPlayerList().collideRuleTeamName);
              collideTeam.setSeeFriendlyInvisibles(false); // Because we want to mimic them not being on a team at all
-@@ -1695,7 +1710,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
+@@ -1694,7 +1709,7 @@ public abstract class MinecraftServer extends ReentrantBlockableEventLoop<TickTa
  
      @DontObfuscate
      public String getServerModName() {
@@ -2202,7 +2202,7 @@ index 7ca6c81afc99d42d2f39b4b6d7f5e8a18b58fba3..1e976253823e85cb6611113847649859
  
      public SystemReport fillSystemReport(SystemReport details) {
 diff --git a/src/main/java/net/minecraft/server/level/ServerChunkCache.java b/src/main/java/net/minecraft/server/level/ServerChunkCache.java
-index 6e3b2863f04419ee6914ac3fd4f12a4fe78d16b7..6a84beeafeb4329921cd2b7fec9ac21f88b8229c 100644
+index fe1a9c646b09d11e7fa2186afbeb70b680ad2b57..43c9175ddf60c0c6cef4ef789ee0dd2bcddf45a0 100644
 --- a/src/main/java/net/minecraft/server/level/ServerChunkCache.java
 +++ b/src/main/java/net/minecraft/server/level/ServerChunkCache.java
 @@ -171,7 +171,11 @@ public class ServerChunkCache extends ChunkSource {
@@ -2318,10 +2318,10 @@ index 9c6a2884c34a9f6e775103da42480cd6b8c693b3..3ef732bd50239c547eddfd0dcbc053a7
      }
  
 diff --git a/src/main/java/org/bukkit/craftbukkit/CraftServer.java b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
-index 7036f8b170ce040accaa2fe637758c6695bdafe8..b6570ed40798afdcaf6e7f413cc0edbd4dda3fd1 100644
+index 74c46cea456f4a736325892bb7b4d0f1b35b62cd..7e5673e315d5ec23d04d3aed99b9aca428c4ac09 100644
 --- a/src/main/java/org/bukkit/craftbukkit/CraftServer.java
 +++ b/src/main/java/org/bukkit/craftbukkit/CraftServer.java
-@@ -261,7 +261,7 @@ import javax.annotation.Nullable; // Paper
+@@ -265,7 +265,7 @@ import javax.annotation.Nullable; // Paper
  import javax.annotation.Nonnull; // Paper
  
  public final class CraftServer implements Server {
