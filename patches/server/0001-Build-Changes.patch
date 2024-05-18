@@ -5,10 +5,10 @@ Subject: [PATCH] Build Changes
 
 
 diff --git a/build.gradle.kts b/build.gradle.kts
-index a9a0590dcdc93597c30cea686a9b4210aae78aab..fc66500d8086863f2e6fcaf6ee79ae116f3b61d2 100644
+index 0dab873b52e718ffb83c655b6467abe53c8fdb1d..d37abefc888c971eed14d5563a312a9ef014cfc5 100644
 --- a/build.gradle.kts
 +++ b/build.gradle.kts
-@@ -89,7 +89,7 @@ tasks.jar {
+@@ -90,7 +90,7 @@ tasks.jar {
          attributes(
              "Main-Class" to "org.bukkit.craftbukkit.Main",
              "Implementation-Title" to "CraftBukkit",
@@ -17,7 +17,7 @@ index a9a0590dcdc93597c30cea686a9b4210aae78aab..fc66500d8086863f2e6fcaf6ee79ae11
              "Implementation-Vendor" to date, // Paper
              "Specification-Title" to "Bukkit",
              "Specification-Version" to project.version,
-@@ -173,7 +173,7 @@ fun TaskContainer.registerRunTask(
+@@ -174,7 +174,7 @@ fun TaskContainer.registerRunTask(
      name: String,
      block: JavaExec.() -> Unit
  ): TaskProvider<JavaExec> = register<JavaExec>(name) {
