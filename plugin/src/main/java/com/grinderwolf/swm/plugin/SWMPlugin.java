@@ -322,12 +322,11 @@ public class SWMPlugin extends JavaPlugin implements SlimePlugin, Listener {
         }
 
         SlimeWorld mirror = instance.getSlimeWorldMirror();
+        registerWorld(mirror);
         getServer().getScheduler().runTask(this, () -> {
             Bukkit.getPluginManager().callEvent(new LoadSlimeWorldEvent(mirror));
-            if (callWorldLoadEvent) Bukkit.getPluginManager().callEvent(new WorldLoadEvent(mirror.getBukkitWorld()));
+            if (callWorldLoadEvent) Bukkit.getPluginManager().callEvent(new WorldLoadEvent(Bukkit.getWorld(mirror.getName())));
         });
-
-        registerWorld(mirror);
         return mirror;
     }
 
