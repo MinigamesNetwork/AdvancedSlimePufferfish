@@ -1,0 +1,104 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: shoker537 <andreybest2002@ya.ru>
+Date: Sat, 18 May 2024 14:33:23 +0300
+Subject: [PATCH] Async world creation support
+
+
+diff --git a/src/main/java/com/infernalsuite/aswm/SlimeNMSBridgeImpl.java b/src/main/java/com/infernalsuite/aswm/SlimeNMSBridgeImpl.java
+index 21c3ea3596a1f954618348afae2b2f7f058393d1..dc66d1e67d541dbd608c2b2a0e26b25cec9183ff 100644
+--- a/src/main/java/com/infernalsuite/aswm/SlimeNMSBridgeImpl.java
++++ b/src/main/java/com/infernalsuite/aswm/SlimeNMSBridgeImpl.java
+@@ -9,7 +9,6 @@ import com.infernalsuite.aswm.level.SlimeBootstrap;
+ import com.infernalsuite.aswm.level.SlimeInMemoryWorld;
+ import com.infernalsuite.aswm.level.SlimeLevelInstance;
+ import com.mojang.serialization.Lifecycle;
+-import net.kyori.adventure.util.Services;
+ import net.minecraft.SharedConstants;
+ import net.minecraft.core.registries.Registries;
+ import net.minecraft.nbt.CompoundTag;
+@@ -36,6 +35,11 @@ import org.bukkit.craftbukkit.persistence.CraftPersistentDataContainer;
+ import org.bukkit.craftbukkit.persistence.CraftPersistentDataTypeRegistry;
+ import org.bukkit.persistence.PersistentDataContainer;
+ import org.jetbrains.annotations.Nullable;
++import org.bukkit.plugin.java.JavaPlugin;
++import java.util.concurrent.CompletableFuture;
++import java.util.concurrent.ExecutionException;
++import java.util.concurrent.TimeUnit;
++import java.util.concurrent.TimeoutException;
+ 
+ import java.io.IOException;
+ import java.util.Locale;
+@@ -145,11 +149,33 @@ public class SlimeNMSBridgeImpl implements SlimeNMSBridge {
+             throw new IllegalArgumentException("World " + worldName + " already exists! Maybe it's an outdated SlimeWorld object?");
+         }
+ 
+-        SlimeLevelInstance server = createCustomWorld(slimeWorld, dimensionOverride);
++        SlimeLevelInstance server = createCustomWorld(null, slimeWorld, dimensionOverride);
+         registerWorld(server);
+         return server.getSlimeInstance();
+     }
+ 
++    @Override
++    public SlimeWorldInstance loadInstanceAsync(JavaPlugin plugin, SlimeWorld slimeWorld) {
++        String worldName = slimeWorld.getName();
++
++        if (Bukkit.getWorld(worldName) != null) {
++            throw new IllegalArgumentException("World " + worldName + " already exists! Maybe it's an outdated SlimeWorld object?");
++        }
++
++        SlimeLevelInstance server = createCustomWorld(plugin, slimeWorld, null);
++        registerWorldAndWait(plugin, server);
++        return server.getSlimeInstance();
++    }
++
++    private synchronized void registerWorldAndWait(JavaPlugin plugin, SlimeLevelInstance level){
++        CompletableFuture<Void> f = CompletableFuture.runAsync(() -> registerWorld(level), plugin.getServer().getScheduler().getMainThreadExecutor(plugin));
++        try {
++            f.get(30, TimeUnit.SECONDS);
++        } catch (Throwable t){
++            throw new RuntimeException(t);
++        }
++    }
++
+     @Override
+     public SlimeWorldInstance getInstance(World world) {
+         CraftWorld craftWorld = (CraftWorld) world;
+@@ -179,7 +205,7 @@ public class SlimeNMSBridgeImpl implements SlimeNMSBridge {
+         mcServer.addLevel(server);
+     }
+ 
+-    private SlimeLevelInstance createCustomWorld(SlimeWorld world, @Nullable ResourceKey<Level> dimensionOverride) {
++    private SlimeLevelInstance createCustomWorld(JavaPlugin plugin, SlimeWorld world, @Nullable ResourceKey<Level> dimensionOverride) {
+         SlimeBootstrap bootstrap = new SlimeBootstrap(world);
+         String worldName = world.getName();
+ 
+@@ -197,10 +223,25 @@ public class SlimeNMSBridgeImpl implements SlimeNMSBridge {
+ 
+         SlimeLevelInstance level;
+ 
+-        try {
+-            level = new SlimeLevelInstance(bootstrap, worldDataServer, worldKey, dimension, stem, environment);
+-        } catch (IOException ex) {
+-            throw new RuntimeException(ex); // TODO do something better with this?
++        if(plugin==null) {
++            try {
++                level = new SlimeLevelInstance(bootstrap, worldDataServer, worldKey, dimension, stem, environment);
++            } catch (IOException ex) {
++                throw new RuntimeException(ex); // TODO do something better with this?
++            }
++        } else {
++            CompletableFuture<SlimeLevelInstance> f = CompletableFuture.supplyAsync(() -> {
++                try {
++                    return new SlimeLevelInstance(bootstrap, worldDataServer, worldKey, dimension, stem, environment);
++                } catch (IOException ex) {
++                    throw new RuntimeException(ex); // TODO do something better with this?
++                }
++            }, plugin.getServer().getScheduler().getMainThreadExecutor(plugin));
++            try {
++                level = f.get(30, TimeUnit.SECONDS);
++            } catch (InterruptedException | ExecutionException | TimeoutException e) {
++                throw new RuntimeException(e);
++            }
+         }
+ 
+         // level.setReady(true);

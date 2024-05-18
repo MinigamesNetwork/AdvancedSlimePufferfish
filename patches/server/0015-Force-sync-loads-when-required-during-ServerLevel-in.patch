@@ -1,0 +1,66 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: shoker137 <andreybest2002@ya.ru>
+Date: Sat, 18 May 2024 14:34:16 +0300
+Subject: [PATCH] Force sync loads when required during ServerLevel init
+
+
+diff --git a/src/main/java/net/minecraft/server/level/ServerLevel.java b/src/main/java/net/minecraft/server/level/ServerLevel.java
+index 2639b04bb372f8a78ec7864faff90d47aefb87e5..ec3a9a4e8136f0dd158b1dca42e2eb17185241fd 100644
+--- a/src/main/java/net/minecraft/server/level/ServerLevel.java
++++ b/src/main/java/net/minecraft/server/level/ServerLevel.java
+@@ -190,7 +190,7 @@ public class ServerLevel extends Level implements WorldGenLevel {
+     private static final int EMPTY_TIME_NO_TICK = 300;
+     private static final int MAX_SCHEDULED_TICKS_PER_TICK = 65536;
+     final List<ServerPlayer> players;
+-    public final ServerChunkCache chunkSource;
++    public ServerChunkCache chunkSource = null;
+     private final MinecraftServer server;
+     public final PrimaryLevelData serverLevelData; // CraftBukkit - type
+     final EntityTickList entityTickList;
+@@ -719,7 +719,7 @@ public class ServerLevel extends Level implements WorldGenLevel {
+         this.serverLevelData = iworlddataserver;
+         ChunkGenerator chunkgenerator = worlddimension.generator();
+         // CraftBukkit start
+-        this.serverLevelData.setWorld(this);
++        sync(() -> this.serverLevelData.setWorld(this));
+ 
+         if (biomeProvider != null) {
+             BiomeSource worldChunkManager = new CustomWorldChunkManager(this.getWorld(), biomeProvider, this.server.registryAccess().registryOrThrow(Registries.BIOME));
+@@ -751,14 +751,17 @@ public class ServerLevel extends Level implements WorldGenLevel {
+         //PersistentEntitySectionManager persistententitysectionmanager = this.entityManager; // Paper - rewrite chunk system
+ 
+         //Objects.requireNonNull(this.entityManager); // Paper - rewrite chunk system
+-        this.chunkSource = new ServerChunkCache(bootstrap, this, convertable_conversionsession, datafixer, structuretemplatemanager, executor, chunkgenerator, j, k, flag2, worldloadlistener, null, () -> { // Paper - rewrite chunk system // ASWM
+-            return minecraftserver.overworld().getDataStorage();
++        ChunkGenerator finalChunkgenerator = chunkgenerator;
++        sync(() -> {
++            this.chunkSource = new ServerChunkCache(bootstrap, this, convertable_conversionsession, datafixer, structuretemplatemanager, executor, finalChunkgenerator, j, k, flag2, worldloadlistener, null, () -> { // Paper - rewrite chunk system // ASWM
++                return minecraftserver.overworld().getDataStorage();
++            });
+         });
+         this.chunkSource.getGeneratorState().ensureStructuresGenerated();
+         this.portalForcer = new PortalForcer(this);
+         this.updateSkyBrightness();
+         this.prepareWeather();
+-        this.getWorldBorder().setAbsoluteMaxSize(minecraftserver.getAbsoluteMaxWorldSize());
++        sync(() -> this.getWorldBorder().setAbsoluteMaxSize(minecraftserver.getAbsoluteMaxWorldSize()));
+         this.raids = (Raids) this.getDataStorage().computeIfAbsent(Raids.factory(this), Raids.getFileId(this.dimensionTypeRegistration()));
+         if (!minecraftserver.isSingleplayer()) {
+             iworlddataserver.setGameType(minecraftserver.getDefaultGameType());
+@@ -779,12 +782,15 @@ public class ServerLevel extends Level implements WorldGenLevel {
+         this.randomSequences = (RandomSequences) Objects.requireNonNullElseGet(randomsequences, () -> {
+             return (RandomSequences) this.getDataStorage().computeIfAbsent(RandomSequences.factory(l), "random_sequences");
+         });
+-        this.getCraftServer().addWorld(this.getWorld()); // CraftBukkit
++        sync(() -> this.getCraftServer().addWorld(this.getWorld()));
+ 
+         this.chunkTaskScheduler = new io.papermc.paper.chunk.system.scheduling.ChunkTaskScheduler(this, io.papermc.paper.chunk.system.scheduling.ChunkTaskScheduler.workerThreads); // Paper - rewrite chunk system
+         this.entityLookup = new io.papermc.paper.chunk.system.entity.EntityLookup(this, new EntityCallbacks()); // Paper - rewrite chunk system
+     }
+ 
++    private static void sync(Runnable r){
++        MinecraftServer.getServer().executeBlocking(r);
++    }
+     // Paper start
+     @Override
+     public boolean hasChunk(int chunkX, int chunkZ) {

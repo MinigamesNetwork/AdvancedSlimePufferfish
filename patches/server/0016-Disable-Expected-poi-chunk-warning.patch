@@ -1,0 +1,19 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: shoker137 <andreybest2002@ya.ru>
+Date: Sat, 18 May 2024 14:34:36 +0300
+Subject: [PATCH] Disable "Expected poi chunk" warning
+
+
+diff --git a/src/main/java/io/papermc/paper/chunk/system/scheduling/ChunkFullTask.java b/src/main/java/io/papermc/paper/chunk/system/scheduling/ChunkFullTask.java
+index 679ed4d53269e1113035b462cf74ab16a231e22e..1299a60b68f47eb5d8c0ac156413149763e4bb66 100644
+--- a/src/main/java/io/papermc/paper/chunk/system/scheduling/ChunkFullTask.java
++++ b/src/main/java/io/papermc/paper/chunk/system/scheduling/ChunkFullTask.java
+@@ -43,7 +43,7 @@ public final class ChunkFullTask extends ChunkProgressionTask implements Runnabl
+             // moved from the load from nbt stage into here
+             final PoiChunk poiChunk = this.chunkHolder.getPoiChunk();
+             if (poiChunk == null) {
+-                LOGGER.error("Expected poi chunk to be loaded with chunk for task " + this.toString());
++//                LOGGER.error("Expected poi chunk to be loaded with chunk for task " + this.toString());
+             } else {
+                 poiChunk.load();
+                 this.world.getPoiManager().checkConsistency(this.fromChunk);
